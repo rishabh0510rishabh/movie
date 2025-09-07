@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}{{ movie.title }} - MovieMate{% endblock %}
+
+{% block content %}
+<div class="movie-detail">
+    <div class="movie-hero" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://image.tmdb.org/t/p/w1280{{ movie.poster_path }}');">
+        <div class="movie-hero-content">
+            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}" class="movie-poster">
+            <div class="movie-info">
+                <h1>{{ movie.title }}</h1>
+                <div class="movie-meta">
+                    <span class="rating"><i class="fas fa-star"></i> {{ movie.rating }}</span>
+                    <span class="release-date">{{ movie.release_date }}</span>
+                    <div class="genres">
+                        {% for genre in movie.genres %}
+                        <span class="genre-tag">{{ genre }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <p class="overview">{{ movie.overview }}</p>
+                <div class="movie-actions">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-play"></i> Watch Trailer
+                    </button>
+                    <button class="btn btn-outline">
+                        <i class="fas fa-plus"></i> Add to List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="movie-detail-content">
+        <section class="cast-section">
+            <h2>Cast</h2>
+            <div class="cast-grid">
+                {% for actor in movie.cast %}
+                <div class="cast-card">
+                    <div class="cast-image"></div>
+                    <h3>{{ actor.name }}</h3>
+                    <p>{{ actor.character }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="similar-section">
+            <h2>Similar Movies</h2>
+            <div class="movies-grid">
+                {% for i in range(5) %}
+                <div class="movie-card">
+                    <div class="movie-image"></div>
+                    <div class="movie-content">
+                        <h3 class="movie-title">Similar Movie {{ i+1 }}</h3>
+                        <div class="movie-info">
+                            <span class="rating"><i class="fas fa-star"></i> 8.{{ i }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

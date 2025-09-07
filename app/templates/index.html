@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Home - MovieMate{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <div class="hero-content">
+        <h1>Discover Your Next Favorite Movie</h1>
+        <p>Explore thousands of movies, TV shows, dramas, and anime. Get personalized recommendations based on your preferences.</p>
+        <div class="hero-actions">
+            <a href="#" class="btn btn-primary">
+                <i class="fas fa-play"></i> Start Watching
+            </a>
+            <a href="#" class="btn btn-outline">
+                <i class="fas fa-plus"></i> My List
+            </a>
+        </div>
+    </div>
+</div>
+
+<section class="section">
+    <h2 class="section-title">Trending Now</h2>
+    <div class="movies-grid">
+        {% for movie in movies %}
+        <div class="movie-card">
+            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}">
+            <div class="movie-content">
+                <h3 class="movie-title">{{ movie.title }}</h3>
+                <div class="movie-info">
+                    <span class="rating"><i class="fas fa-star"></i> {{ movie.rating }}</span>
+                </div>
+                <div class="movie-actions">
+                    <button class="icon-btn"><i class="far fa-bookmark"></i></button>
+                    <button class="icon-btn"><i class="far fa-heart"></i></button>
+                    <button class="icon-btn"><i class="far fa-star"></i></button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="section">
+    <h2 class="section-title">Browse Categories</h2>
+    <div class="categories-grid">
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-fire"></i></div>
+            <h3>Action</h3>
+        </div>
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-mountain"></i></div>
+            <h3>Adventure</h3>
+        </div>
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-laugh"></i></div>
+            <h3>Comedy</h3>
+        </div>
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-theater-masks"></i></div>
+            <h3>Drama</h3>
+        </div>
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-ghost"></i></div>
+            <h3>Horror</h3>
+        </div>
+        <div class="category-card">
+            <div class="category-icon"><i class="fas fa-rocket"></i></div>
+            <h3>Sci-Fi</h3>
+        </div>
+    </div>
+</section>
+{% endblock %}

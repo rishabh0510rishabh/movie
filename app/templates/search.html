@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Search - MovieMate{% endblock %}
+
+{% block content %}
+<div class="section">
+    <h2 class="section-title">Search Results for "{{ query }}"</h2>
+    
+    {% if movies %}
+    <div class="movies-grid">
+        {% for movie in movies %}
+        <div class="movie-card" data-id="{{ movie.id }}">
+            <img src="https://image.tmdb.org/t/p/w300{{ movie.poster_path }}" alt="{{ movie.title }}" onerror="this.src='https://via.placeholder.com/300x450/1a1a24/ffffff?text=No+Image'">
+            <div class="movie-content">
+                <h3 class="movie-title">{{ movie.title }}</h3>
+                <div class="movie-info">
+                    <span class="rating"><i class="fas fa-star"></i> {{ movie.vote_average|round(1) }}</span>
+                    <span>{{ movie.release_date[:4] if movie.release_date else 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-results">
+        <p>No results found for "{{ query }}". Try a different search term.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
