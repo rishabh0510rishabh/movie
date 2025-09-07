@@ -4,28 +4,61 @@
 
 {% block content %}
 <div class="movie-detail">
-    <div class="movie-hero" style="background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://image.tmdb.org/t/p/w1280{{ content.backdrop_path }}');">
+    <!-- Part 1: Clean Hero Section -->
+    <div class="movie-hero" style="background-image: linear-gradient(to top, rgba(15, 15, 19, 1) 5%, rgba(15, 15, 19, 0.7) 100%), url('https://image.tmdb.org/t/p/w1280{{ content.backdrop_path }}');">
         <div class="movie-hero-content">
             <img src="https://image.tmdb.org/t/p/w300{{ content.poster_path }}" alt="{{ content.title or content.name }}" class="movie-poster">
             <div class="movie-info">
                 <h1>{{ content.title or content.name }}</h1>
-                <p class="overview">{{ content.overview }}</p>
-                {% if trailer %}
-                <a href="https://www.youtube.com/watch?v={{ trailer.key }}" target="_blank" class="btn btn-primary">
-                    <i class="fas fa-play"></i> Watch Trailer
-                </a>
-                {% endif %}
+                <div class="movie-meta">
+                    <span class="rating"><i class="fas fa-star"></i> {{ content.vote_average|round(1) }}</span>
+                </div>
+                <div class="movie-actions">
+                    {% if trailer %}
+                    <a href="https://www.youtube.com/watch?v={{ trailer.key }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Watch Trailer
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
     
+    <!-- Part 2: Detailed Content Body -->
+    <div class="main-content detail-content-body">
+        <div class="detail-left">
+            <h2 class="section-title">Storyline</h2>
+            <p class="overview">{{ content.overview }}</p>
+            <div class="genres">
+                {% for genre in content.genres %}
+                <span class="genre-tag">{{ genre.name }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="detail-right">
+             <a href="#" class="btn btn-outline btn-full">
+                <i class="fas fa-plus"></i> Add to List
+            </a>
+            <div class="meta-info">
+                <h3>Details</h3>
+                 <p><strong>Status:</strong> {{ content.status }}</p>
+                {% if content_type == 'movie' %}
+                 <p><strong>Release Date:</strong> {{ content.release_date }}</p>
+                {% else %}
+                 <p><strong>First Air Date:</strong> {{ content.first_air_date }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     {% if trailer %}
-    <div class="section">
+    <div class="main-content trailer-section">
         <h2 class="section-title">Trailer</h2>
         <div class="trailer-container">
-            <iframe width="100%" height="500" src="https://www.youtube.com/embed/{{ trailer.key }}" frameborder="0" allowfullscreen></iframe>
+            <iframe width="100%" height="500" src="https://www.youtube.com/embed/{{ trailer.key }}" frameborder="0" allowfullscreen style="border-radius: var(--border-radius);"></iframe>
         </div>
     </div>
     {% endif %}
 </div>
 {% endblock %}
+
