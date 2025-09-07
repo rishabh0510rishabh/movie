@@ -37,3 +37,22 @@ class TMDBService:
         url = f"{cls.BASE_URL}/genre/movie/list?api_key={cls.API_KEY}"
         response = requests.get(url)
         return response.json()
+    
+    # --- NEW: Methods for TV Shows ---
+    @classmethod
+    def get_popular_tv(cls, page=1):
+        url = f"{cls.BASE_URL}/tv/popular?api_key={cls.API_KEY}&page={page}"
+        response = requests.get(url)
+        return response.json()
+
+    @classmethod
+    def get_tv_details(cls, tv_id):
+        url = f"{cls.BASE_URL}/tv/{tv_id}?api_key={cls.API_KEY}"
+        response = requests.get(url)
+        return response.json()
+
+    @classmethod
+    def get_tv_videos(cls, tv_id):
+        url = f"{cls.BASE_URL}/tv/{tv_id}/videos?api_key={cls.API_KEY}"
+        response = requests.get(url)
+        return response.json()

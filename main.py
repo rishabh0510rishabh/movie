@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_bcrypt import Bcrypt
 import os
 from dotenv import load_dotenv
 from app.services.tmdb import TMDBService
@@ -13,173 +15,128 @@ app = Flask(
     static_folder="app/static"
 )
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///movies.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Database setup
-def init_db():
-    conn = sqlite3.connect('movies.db')
-    c = conn.cursor()
-    
-    # Users table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Movies table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS movies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tmdb_id INTEGER NOT NULL,
-            title TEXT NOT NULL,
-            overview TEXT,
-            release_date TEXT,
-            poster_path TEXT,
-            genre TEXT,
-            rating REAL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # User interactions table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS user_interactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            movie_id INTEGER NOT NULL,
-            watched BOOLEAN DEFAULT FALSE,
-            rating INTEGER DEFAULT 0,
-            interested BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id),
-            FOREIGN KEY (movie_id) REFERENCES movies (id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+# --- NEW: Initialize extensions ---
+db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message_category = 'info'
 
-# Initialize database
-init_db()
+# --- NEW: User Model for Database ---
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
+
+    def check_password(self, password):
+        return bcrypt.check_password_hash(self.password_hash, password)
+
+# --- NEW: User Loader for Flask-Login ---
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 # Home route
 @app.route('/')
 def index():
     try:
-        # Get popular movies from TMDB
-        popular_movies = TMDBService.get_popular_movies()
-        movies = popular_movies.get('results', [])[:10]  # Get first 10 movies
-        
-        # Format movie data for template
-        formatted_movies = []
-        for movie in movies:
-            formatted_movies.append({
-                'id': movie['id'],
-                'title': movie['title'],
-                'poster_path': movie['poster_path'],
-                'rating': movie['vote_average'],
-                'overview': movie['overview'],
-                'release_date': movie['release_date']
-            })
-        
-        return render_template('index.html', movies=formatted_movies)
+        popular_movies = TMDBService.get_popular_movies().get('results', [])[:10]
+        popular_tv = TMDBService.get_popular_tv().get('results', [])[:10]
+        return render_template('index.html', movies=popular_movies, tv_shows=popular_tv)
     except Exception as e:
-        # Fallback to sample data if API fails
         print(f"Error fetching from TMDB: {e}")
-        sample_movies = [
-            {'id': 1, 'title': 'Avengers: Endgame', 'poster_path': '/or06FN3Dka5tukK1e9sl16pB3iy.jpg', 'rating': 8.4},
-            {'id': 2, 'title': 'The Dark Knight', 'poster_path': '/qJ2tW6WMUDux911r6m7haRef0WH.jpg', 'rating': 9.0},
-        ]
-        return render_template('index.html', movies=sample_movies)
+        return render_template('index.html', movies=[], tv_shows=[])
 
-# Login route
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+# --- NEW: Registration Route ---
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
     if request.method == 'POST':
         username = request.form['username']
-        password = request.form['password']  # In real app, hash and verify password
+        email = request.form['email']
+        password = request.form['password']
         
-        # Simple authentication (for demo only)
-        if username == 'demo' and password == 'password':
-            session['user_id'] = 1
-            session['username'] = username
+        # Check if user already exists
+        user_exists = User.query.filter_by(username=username).first()
+        email_exists = User.query.filter_by(email=email).first()
+        
+        if user_exists:
+            flash('Username already exists. Please choose a different one.', 'error')
+        elif email_exists:
+            flash('Email address is already registered.', 'error')
+        else:
+            new_user = User(username=username, email=email)
+            new_user.set_password(password)
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Account created successfully! Please log in.', 'success')
+            return redirect(url_for('login'))
+            
+    return render_template('register.html')
+
+# --- UPDATED: Login Route ---
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user, remember=True)
             flash('Login successful!', 'success')
             return redirect(url_for('index'))
         else:
-            flash('Invalid credentials', 'error')
+            flash('Invalid username or password', 'error')
     
     return render_template('login.html')
 
-# Logout route
+# --- UPDATED: Logout Route ---
 @app.route('/logout')
+@login_required
 def logout():
-    session.clear()
-    flash('You have been logged out', 'info')
+    logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
 # Movie detail route
 @app.route('/movie/<int:movie_id>')
 def movie_detail(movie_id):
     try:
-        # Get movie details from TMDB
         movie = TMDBService.get_movie_details(movie_id)
-        credits = TMDBService.get_movie_credits(movie_id)
-        
-        # Format data for template
-        formatted_movie = {
-            'id': movie['id'],
-            'title': movie['title'],
-            'overview': movie['overview'],
-            'release_date': movie['release_date'],
-            'poster_path': movie['poster_path'],
-            'rating': movie['vote_average'],
-            'genres': [genre['name'] for genre in movie['genres']],
-            'cast': []
-        }
-        
-        # Get top 10 cast members
-        for person in credits.get('cast', [])[:10]:
-            formatted_movie['cast'].append({
-                'name': person['name'],
-                'character': person['character'],
-                'profile_path': person['profile_path']
-            })
-        
-        return render_template('movie_detail.html', movie=formatted_movie)
+        videos = TMDBService.get_movie_videos(movie_id).get('results', [])
+        trailer = next((v for v in videos if v['type'] == 'Trailer'), None)
+        return render_template('movie_detail.html', movie=movie, trailer=trailer)
     except Exception as e:
         print(f"Error fetching movie details: {e}")
-        flash('Error loading movie details', 'error')
+        flash('Error loading movie details.', 'error')
+        return redirect(url_for('index'))
+    
+# TV show detail route
+@app.route('/tv/<int:tv_id>')
+def tv_detail(tv_id):
+    try:
+        tv_show = TMDBService.get_tv_details(tv_id)
+        videos = TMDBService.get_tv_videos(tv_id).get('results', [])
+        trailer = next((v for v in videos if v['type'] == 'Trailer'), None)
+        # Use a generic detail template for now
+        return render_template('content_detail.html', content=tv_show, trailer=trailer, content_type='tv')
+    except Exception as e:
+        print(f"Error fetching TV details: {e}")
+        flash('Error loading TV show details.', 'error')
         return redirect(url_for('index'))
 
-# API route to get movies
-@app.route('/api/movies')
-def api_movies():
-    conn = sqlite3.connect('movies.db')
-    c = conn.cursor()
-    c.execute('SELECT * FROM movies LIMIT 10')
-    movies = c.fetchall()
-    conn.close()
-    
-    # Format movies as list of dictionaries
-    movies_list = []
-    for movie in movies:
-        movies_list.append({
-            'id': movie[0],
-            'tmdb_id': movie[1],
-            'title': movie[2],
-            'overview': movie[3],
-            'release_date': movie[4],
-            'poster_path': movie[5],
-            'genre': movie[6],
-            'rating': movie[7]
-        })
-    
-    return jsonify(movies_list)
-
+# Search route
 @app.route('/search')
 def search():
     query = request.args.get('q', '')
@@ -193,6 +150,7 @@ def search():
             flash('Error performing search', 'error')
     return render_template('search.html', movies=[], query=query)
 
-
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all() # Create database tables if they don't exist
     app.run(debug=True, host='0.0.0.0', port=5000)

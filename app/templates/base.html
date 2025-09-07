@@ -14,8 +14,8 @@
                 <i class="fas fa-film"></i> MovieMate
             </a>
             <div class="nav-links">
-                <form action="{{ url_for("search") }}" method="GET" class="search-form">
-                    <input type="text" name="q" placeholder="Search movies..." class="search-input">
+                <form action="{{ url_for('search') }}" method="GET" class="search-form">
+                    <input type="text" name="q" placeholder="Search..." class="search-input">
                     <button type="submit" class="search-btn"><i class="fas fa-search"></i></button>
                 </form>
                 <a href="{{ url_for('index') }}">Home</a>
@@ -25,12 +25,12 @@
                 <a href="#">Anime</a>
             </div>
             <div class="auth-links">
-                {% if session.user_id %}
-                    <span>Hello, {{ session.username }}</span>
+                {% if current_user.is_authenticated %}
+                    <span>Hello, {{ current_user.username }}</span>
                     <a href="{{ url_for('logout') }}">Logout</a>
                 {% else %}
                     <a href="{{ url_for('login') }}">Login</a>
-                    <a href="#">Register</a>
+                    <a href="{{ url_for('register') }}">Register</a>
                 {% endif %}
             </div>
         </div>
